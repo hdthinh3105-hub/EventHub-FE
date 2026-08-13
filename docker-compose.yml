@@ -1,0 +1,29 @@
+# docker-compose.yml
+#
+# 1 service duy nhất: "app" - frontend được build với nginx, phục vụ SPA
+# trên cổng 8080 (host) -> 80 (container). VITE_API_URL được truyền qua
+# build args (Vite nhúng giá trị này vào bundle LÚC BUILD, xem Dockerfile).
+#
+# LƯU Ý (giống compose của backend): file này chỉ để chạy TRÊN MÁY MÌNH
+# (local) với `docker compose up --build`. Khi deploy thật lên Render
+# (Phase 16 CD) dùng "Static Site" - Render tự chạy build script + serve
+# dist/ bằng nginx của họ, còn biến build-time thì set ở trang cấu hình
+# Render, KHÔNG dùng docker-compose này.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000
+    container_name: eventhub-frontend
+    restart: unless-stopped
+    ports:
+      - '8080:80' # truy cập local qua http://localhost:8080
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost/']
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3

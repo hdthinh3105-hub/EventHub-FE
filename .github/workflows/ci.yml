@@ -1,0 +1,50 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cài đặt Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Cài đặt package
+        run: npm ci
+
+      - name: Kiểm tra type TypeScript (không build ra file)
+        run: npm run typecheck
+
+      - name: Chạy test (Vitest + Testing Library)
+        run: npm test
+
+      # Build với VITE_API_URL. Dùng repo variable (vars) để không cần
+      # dấu secret nếu URL API là public - ưu tiên biến đặt ở GitHub, nếu
+      # chưa đặt thì fallback về localhost (giống ci.yml của BE).
+      - name: Build production (đảm bảo build thật không lỗi)
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://localhost:4000' }}
+        run: npm run build
+
+  # --- CD: chỉ chạy khi build-and-test THÀNH CÔNG, và CHỈ khi push thẳng
+  # vào main (không chạy cho Pull Request - tránh deploy code chưa được
+  # review/merge). Giống hệt backend: gọi Render Deploy Hook.
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gọi Render Deploy Hook
+        run: |
+          curl -f -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

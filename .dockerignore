@@ -1,0 +1,18 @@
+# .dockerignore
+#
+# Giống hệt vai trò .gitignore nhưng cho Docker - loại trừ khỏi "build
+# context" (dữ liệu gửi tới Docker daemon khi build image). Loại .env và
+# .env.local vì VITE_API_URL được truyền qua ARG build (xem Dockerfile),
+# không cần (và không nên) mang theo file env thật vào image.
+
+node_modules
+dist
+.env
+.env.local
+*.log
+logs
+.git
+.gitignore
+.vscode
+tests
+coverage
