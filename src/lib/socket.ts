@@ -1,26 +1,40 @@
 import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { API_URL, getAccessToken } from '@/api/client';
-import type { TicketSoldEvent } from '@/types';
+import type { TicketSoldEvent, HoldReleasedEvent, CheckinProcessedEvent, NotificationItem } from '@/types';
 
 interface UseEventSocketOptions {
   eventIds: string[];
   enabled?: boolean;
   onTicketSold?: (event: TicketSoldEvent) => void;
+  onHoldReleased?: (event: HoldReleasedEvent) => void;
+  onCheckin?: (event: CheckinProcessedEvent) => void;
+  onNotification?: (notification: NotificationItem) => void;
 }
 
-export function useEventSocket({ eventIds, enabled = true, onTicketSold }: UseEventSocketOptions) {
+export function useEventSocket({
+  eventIds,
+  enabled = true,
+  onTicketSold,
+  onHoldReleased,
+  onCheckin,
+  onNotification,
+}: UseEventSocketOptions) {
   const socketRef = useRef<Socket | null>(null);
-  const callbackRef = useRef(onTicketSold);
-  callbackRef.current = onTicketSold;
+  const callbacksRef = useRef({ onTicketSold, onHoldReleased, onCheckin, onNotification });
+  callbacksRef.current = { onTicketSold, onHoldReleased, onCheckin, onNotification };
 
   useEffect(() => {
     if (!enabled || eventIds.length === 0) return;
-    const token = getAccessToken();
-    if (!token) return;
 
+    const token = getAccessToken();
+
+    // Không bắt buộc có token: trang công khai (VD chi tiết sự kiện) vẫn
+    // kết nối được ở chế độ anonymous để nhận số vé còn lại realtime.
+    // Nếu có token thì gửi kèm để BE xác thực và tự join room cá nhân
+    // (nhận thông báo riêng tư như 'notification').
     const socket = io(API_URL, {
-      auth: { token },
+      auth: token ? { token } : {},
       transports: ['websocket'],
     });
 
@@ -29,7 +43,19 @@ export function useEventSocket({ eventIds, enabled = true, onTicketSold }: UseEv
     });
 
     socket.on('ticket_sold', (data: TicketSoldEvent) => {
-      callbackRef.current?.(data);
+      callbacksRef.current.onTicketSold?.(data);
+    });
+
+    socket.on('hold_released', (data: HoldReleasedEvent) => {
+      callbacksRef.current.onHoldReleased?.(data);
+    });
+
+    socket.on('checkin_processed', (data: CheckinProcessedEvent) => {
+      callbacksRef.current.onCheckin?.(data);
+    });
+
+    socket.on('notification', (data: NotificationItem) => {
+      callbacksRef.current.onNotification?.(data);
     });
 
     socketRef.current = socket;

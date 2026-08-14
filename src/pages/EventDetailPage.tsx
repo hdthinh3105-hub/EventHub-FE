@@ -7,7 +7,8 @@ import { useToast } from '@/components/Toast';
 import { Spinner, EmptyState } from '@/components/Feedback';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatCurrency, formatDateTime, timeLeft } from '@/lib/format';
-import type { EventDetail as EventDetailType, TicketType } from '@/types';
+import type { EventDetail as EventDetailType, TicketType, HoldReleasedEvent } from '@/types';
+import { useEventSocket } from '@/lib/socket';
 
 interface PendingHold {
   holdId: string;
@@ -35,6 +36,9 @@ export function EventDetailPage() {
   const [pendingHold, setPendingHold] = useState<PendingHold | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
+  // Số vé còn lại cập nhật REALTIME qua socket (ticket_sold, hold_released)
+  // để khách xem thấy "Còn X vé" thay đổi ngay khi có giao dịch, không F5.
+  const [liveAvailable, setLiveAvailable] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -63,7 +67,40 @@ export function EventDetailPage() {
     void load();
   }, [load]);
 
-  const availableFor = (tt: TicketType) => Math.max(0, tt.totalQuantity - tt.soldQuantity);
+  // Theo dõi realtime số vé còn lại: khi có vé được bán (ticket_sold) thì
+  // giảm, khi hold hết hạn (hold_released) thì tăng lại số vé.
+  useEventSocket({
+    enabled: !!event && event.status === 'PUBLISHED',
+    eventIds: [id],
+    onTicketSold: (data) => {
+      const tt = event?.ticketTypes.find((t) => t.id === data.ticketTypeId);
+      if (!tt) return;
+      setLiveAvailable((prev) => ({
+        ...prev,
+        [data.ticketTypeId]: Math.max(0, tt.totalQuantity - data.newSoldQuantity),
+      }));
+      notify(`🎟️ Vừa có ${data.quantitySold} vé "${data.ticketTypeName}" được bán!`);
+    },
+    onHoldReleased: (data: HoldReleasedEvent) => {
+      const releases = data.releases ?? [];
+      if (event?.ticketTypes.some((t) => releases.some((r) => r.ticketTypeId === t.id))) {
+        setLiveAvailable((prev) => {
+          const next = { ...prev };
+          for (const r of releases) {
+            const tt = event?.ticketTypes.find((t) => t.id === r.ticketTypeId);
+            if (!tt) continue;
+            const base = tt.totalQuantity - tt.soldQuantity;
+            const current = prev[r.ticketTypeId] ?? base;
+            next[r.ticketTypeId] = Math.min(base, current + r.quantityReleased);
+          }
+          return next;
+        });
+      }
+    },
+  });
+
+  const availableFor = (tt: TicketType) =>
+    liveAvailable[tt.id] ?? Math.max(0, tt.totalQuantity - tt.soldQuantity);
 
   const handleBuy = async (tt: TicketType) => {
     if (!user) {

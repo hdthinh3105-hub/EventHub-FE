@@ -52,6 +52,11 @@ export function OrganizerDashboard() {
       // mỗi lần có vé bán (BE giới hạn 300-600 request/15 phút/IP).
       notify(`🎉 Có ${data.quantitySold} vé "${data.ticketTypeName}" vừa được bán!`);
     },
+    // Thông báo cá nhân (room user:<id>) — Organizer nhận realtime bất kỳ
+    // sự kiện nào của mình có vé được bán, kể cả khi đang ở dashboard.
+    onNotification: (notification) => {
+      notify(`🔔 ${notification.title}: ${notification.message}`);
+    },
   });
 
   if (loading && events.length === 0) {

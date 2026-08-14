@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/Toast';
 import { useEventSocket } from '@/lib/socket';
 import { formatCurrency, formatDateTime } from '@/lib/format';
-import type { EventDetail, EventStatus, EventStaff, NotificationItem, TicketType, CheckinResult } from '@/types';
+import type { EventDetail, EventStatus, EventStaff, NotificationItem, TicketType, CheckinResult, CheckinProcessedEvent } from '@/types';
 
 type Tab = 'info' | 'ticket-types' | 'staff' | 'checkin' | 'data';
 
@@ -29,6 +29,8 @@ export function EventManagePage() {
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('info');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  // Luồng check-in realtime nhận qua socket (khách vừa vào cổng).
+  const [liveCheckins, setLiveCheckins] = useState<CheckinProcessedEvent[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -74,6 +76,18 @@ export function EventManagePage() {
             }
           : prev,
       );
+    },
+    // Khách vừa được quét vé vào cổng -> cập nhật luồng check-in realtime
+    // ngay lập tức, không cần F5.
+    onCheckin: (data) => {
+      notify(`✅ ${data.customerName} vừa check-in vào sự kiện!`);
+      setLiveCheckins((prev) => [data, ...prev].slice(0, 30));
+    },
+    // Thông báo (VD: "Có vé mới được bán") do BE đẩy realtime tới room
+    // cá nhân -> thêm thẳng vào danh sách thay vì chờ refetch.
+    onNotification: (notification) => {
+      notify(`🔔 ${notification.title}`);
+      setNotifications((prev) => [notification, ...prev].slice(0, 50));
     },
   });
 
@@ -159,7 +173,7 @@ export function EventManagePage() {
         {tab === 'info' && <InfoTab event={event} onReload={load} notify={notify} />}
         {tab === 'ticket-types' && <TicketTypesTab event={event} onReload={load} notify={notify} />}
         {tab === 'staff' && <StaffTab event={event} notify={notify} />}
-        {tab === 'checkin' && <CheckinTab notify={notify} />}
+        {tab === 'checkin' && <CheckinTab notify={notify} liveCheckins={liveCheckins} />}
         {tab === 'data' && <DataTab event={event} notify={notify} />}
 
         <h2 className="section-title">Thông báo gần đây</h2>
@@ -687,7 +701,13 @@ function StaffTab({ event, notify }: { event: EventDetail; notify: (m: string, k
 
 /* ---------------- Tab: Check-in ---------------- */
 
-function CheckinTab({ notify }: { notify: (m: string, k?: 'success' | 'error') => void }) {
+function CheckinTab({
+  notify,
+  liveCheckins,
+}: {
+  notify: (m: string, k?: 'success' | 'error') => void;
+  liveCheckins: CheckinProcessedEvent[];
+}) {
   const [qrCode, setQrCode] = useState('');
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<CheckinResult | null>(null);
@@ -745,6 +765,35 @@ function CheckinTab({ notify }: { notify: (m: string, k?: 'success' | 'error') =
         <div style={{ fontSize: 13, color: 'var(--color-text-soft)', marginTop: 8 }}>
           Mỗi vé chỉ check-in được đúng 1 lần (quét lại sẽ báo lỗi 409).
         </div>
+      </div>
+
+      <div className="card" style={{ padding: 24, maxWidth: 560, marginTop: 16 }}>
+        <h3 style={{ marginTop: 0 }}>
+          Luồng check-in realtime{' '}
+          {liveCheckins.length > 0 && (
+            <span className="badge badge-success">{liveCheckins.length} lượt</span>
+          )}
+        </h3>
+        {liveCheckins.length === 0 ? (
+          <div style={{ fontSize: 14, color: 'var(--color-text-soft)' }}>
+            Chưa có ai check-in. Khi nhân viên quét vé tại cổng, mục này cập nhật ngay lập tức
+            qua WebSocket.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
+            {liveCheckins.map((c) => (
+              <div key={c.ticketId} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <span className="badge badge-success">✓</span>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{c.customerName}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-soft)' }}>
+                    {formatDateTime(c.checkedInAt)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

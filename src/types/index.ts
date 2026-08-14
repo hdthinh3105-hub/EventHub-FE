@@ -157,3 +157,20 @@ export interface TicketSoldEvent {
   newSoldQuantity: number;
   totalQuantity: number;
 }
+
+// BE đẩy qua socket khi 1 hold hết hạn -> số vé của ticketType được hoàn
+// trả về quỹ vé (khách xem trang sẽ thấy "Còn lại" tăng lên realtime).
+export interface HoldReleasedEvent {
+  eventId: string;
+  releases: { ticketTypeId: string; quantityReleased: number }[];
+}
+
+// BE đẩy qua socket khi 1 vé vừa được check-in tại cổng -> Organizer
+// theo dõi thấy luồng khách vào sự kiện realtime.
+export interface CheckinProcessedEvent {
+  ticketId: string;
+  eventId: string;
+  customerName: string;
+  customerEmail: string;
+  checkedInAt: string;
+}

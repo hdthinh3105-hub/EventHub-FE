@@ -6,18 +6,18 @@ Frontend (React + Vite + TypeScript) cho nền tảng đặt vé & quản lý s�
 
 ### Khách hàng
 - Xem danh sách sự kiện (search bằng Full-Text Search, lọc theo danh mục, phân trang)
-- Xem chi tiết sự kiện + chọn loại vé, số lượng
+- Xem chi tiết sự kiện + chọn loại vé, số lượng — **số vé "Còn lại" cập nhật realtime qua Socket.IO** (khi có người mua, khi hold hết hạn số vé được hoàn về quỹ vé)
 - Giữ chỗ (đếm ngược 10 phút) → Thanh toán → xem vé điện tử kèm **mã QR thật** ngay trên màn hình
 - Đăng ký / đăng nhập / quên mật khẩu / xác thực email (link trong email đúng route FE)
 
 ### Nhà tổ chức (Organizer) / Admin
-- Dashboard "Sự kiện của tôi" (+ realtime: toast khi có vé bán mới qua Socket.IO)
+- Dashboard "Sự kiện của tôi" — realtime qua Socket.IO: toast ngay khi có vé bán, push thông báo cá nhân (room `user:<id>`)
 - Tạo / sửa sự kiện, upload ảnh bìa, chuyển trạng thái DRAFT → PUBLISHED → CANCELLED/COMPLETED
 - Quản lý loại vé (CRUD, chặn giảm tổng số vé dưới số đã bán)
 - Gán/bỏ gán nhân viên STAFF check-in
-- Check-in tại cổng bằng mã QR (phân quyền 3 tầng phía server)
+- Check-in tại cổng bằng mã QR (phân quyền 3 tầng phía server) + **luồng check-in realtime**: mọi người đang mở trang quản lý thấy khách vừa vào cổng ngay lập tức
 - Xuất báo cáo doanh thu Excel, import vé mời hàng loạt từ file `.xlsx`
-- Thông báo (mark read hàng loạt)
+- Thông báo realtime (đẩy thẳng vào danh sách khi có vé mới bán, không cần F5) + mark read hàng loạt
 
 ### Quản trị viên (Admin)
 - Quản lý người dùng & gán role (ADMIN/ORGANIZER/STAFF/CUSTOMER)
@@ -91,7 +91,21 @@ Tài khoản seed (xem `../eventhub-backend/prisma/seed.ts`, mật khẩu `Passw
 
 - Không có endpoint "đơn vé của tôi" hay "sự kiện của tôi" phía BE → Organizer Dashboard lọc `organizer.id` phía client (BE đã ghi nhận là giới hạn kiến trúc cần thêm `GET /my-events`).
 - `GET /users` chỉ ADMIN có quyền → Organizer khi gán staff phải tự nhập `userId` (Admin xem ở trang quản trị).
-- Socket.IO kết nối bằng `accessToken`; khi token hết hạn cần refresh+đăng nhập lại để realtime tiếp tục hoạt động.
+- Socket.IO: trang công khai (chi tiết sự kiện) kết nối **anonymous** để nhận số vé còn lại realtime; khi có `accessToken` sẽ gửi kèm để nhận cả thông báo cá nhân (room `user:<id>`). Khi token hết hạn cần refresh + đăng nhập lại để nhận tiếp thông báo cá nhân (số vé công khai vẫn hoạt động).
+
+## Realtime (Socket.IO)
+
+Hook `useEventSocket` (`src/lib/socket.ts`) quản lý 1 kết nối WebSocket duy nhất, tự động:
+- Gửi kèm `accessToken` nếu có (đăng nhập) — **không bắt buộc** cho các trang công khai (anonymous).
+- Join tất cả room `event:<id>` được yêu cầu; BE tự join room `user:<id>` cho socket đã xác thực.
+
+**Các sự kiện FE đang lắng nghe:**
+| Sự kiện | Trang sử dụng | Hành động |
+|---|---|---|
+| `ticket_sold` | `EventDetailPage`, `EventManagePage`, `OrganizerDashboard` | Giảm số vé còn lại / cập nhật `soldQuantity` + toast |
+| `hold_released` | `EventDetailPage` | Hoàn trả số vé bị giữ hết hạn vào "Còn lại" |
+| `checkin_processed` | `EventManagePage` (tab Check-in) | Thêm khách vào luồng check-in realtime + toast |
+| `notification` | `EventManagePage`, `OrganizerDashboard` | Push thông báo mới vào danh sách + toast (không F5) |
 
 ## Routes
 
