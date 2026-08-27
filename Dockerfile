@@ -13,7 +13,7 @@
 # khai của API, khác hẳn secret thật ở backend.
 
 # ---------- Stage 1: builder ----------
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
