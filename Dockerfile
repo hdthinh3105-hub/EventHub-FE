@@ -31,7 +31,7 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # ---------- Stage 2: nginx ----------
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 # Copy bundle đã build sang thư mục gốc web của nginx.
 COPY --from=builder /app/dist /usr/share/nginx/html
