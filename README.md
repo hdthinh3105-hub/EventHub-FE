@@ -20,11 +20,16 @@ Mật khẩu chung: `Password123!`
 ## 2. Chạy nhanh 30 giây bằng Docker (không cần Node local)
 
 ```bash
-# Backend phải chạy trước (có Postgres/Redis/RabbitMQ)
-cd ../eventhub-backend
+# 1. Clone (bỏ qua nếu đã tải folder EventHub)
+git clone https://github.com/hdthinh3105-hub/EventHub.git
+git clone https://github.com/hdthinh3105-hub/EventHub-FE.git
+
+# 2. Backend phải chạy trước (có Postgres/Redis/RabbitMQ)
+cd EventHub/eventhub-backend
+cp .env.example .env   # điền 6 dòng JWT_*/GMAIL_*/CLOUDINARY_* (xem mục 5)
 docker compose up --build -d   # BE: http://localhost:4000
 
-# Frontend — 1 service nginx riêng
+# 3. Frontend — 1 service nginx riêng
 cd ../eventhub-frontend
 docker compose up --build -d   # FE: http://localhost:8080
 # Mở http://localhost:8080 — F5 ở /events/123 không 404 (SPA fallback)
@@ -43,14 +48,18 @@ Dừng: `docker compose down`
 ## 3. Chạy thủ công (npm) — dành cho dev
 
 ```bash
-# Terminal 1 — Backend
-cd ../eventhub-backend
+# 1. Clone (bỏ qua nếu đã có)
+git clone https://github.com/hdthinh3105-hub/EventHub.git
+git clone https://github.com/hdthinh3105-hub/EventHub-FE.git
+
+# 2. Backend
+cd EventHub/eventhub-backend
 npm ci && cp .env.example .env  # điền .env rồi:
 npx prisma generate && npx prisma migrate dev && npx prisma db seed
 npm run dev   # http://localhost:4000
 
-# Terminal 2 — Frontend
-cd eventhub-frontend
+# 3. Frontend (terminal khác)
+cd ../../EventHub-FE
 npm ci
 cp .env.example .env   # VITE_API_URL=http://localhost:4000
 npm run dev            # http://localhost:5173
