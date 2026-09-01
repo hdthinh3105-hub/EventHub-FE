@@ -549,11 +549,9 @@ function EditTicketTypeForm({
 /* ---------------- Tab: Nhân viên check-in ---------------- */
 
 function StaffTab({ event, notify }: { event: EventDetail; notify: (m: string, k?: 'success' | 'error') => void }) {
-  const { user } = useAuth();
   const [staff, setStaff] = useState<EventStaff[]>([]);
   const [loading, setLoading] = useState(true);
   const [candidateId, setCandidateId] = useState('');
-  const [manualId, setManualId] = useState('');
   const [staffUsers, setStaffUsers] = useState<{ id: string; email: string; fullName: string }[]>([]);
   const [assigning, setAssigning] = useState(false);
 
@@ -573,29 +571,25 @@ function StaffTab({ event, notify }: { event: EventDetail; notify: (m: string, k
   }, [load]);
 
   useEffect(() => {
-    if (user?.role === 'ADMIN') {
-      adminApi
-        .listUsers()
-        .then((users) => {
-          setStaffUsers(users.filter((u) => u.role.name === 'STAFF').map((u) => ({ id: u.id, email: u.email, fullName: u.fullName })));
-        })
-        .catch(() => setStaffUsers([]));
-    }
+    adminApi
+      .listStaffUsers()
+      .then((users) => {
+        setStaffUsers(users.map((u) => ({ id: u.id, email: u.email, fullName: u.fullName })));
+      })
+      .catch(() => setStaffUsers([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const assign = async () => {
-    const targetId = candidateId || manualId.trim();
-    if (!targetId) {
+    if (!candidateId) {
       notify('Vui lòng chọn nhân viên', 'error');
       return;
     }
     setAssigning(true);
     try {
-      await eventStaffApi.assign(event.id, targetId);
+      await eventStaffApi.assign(event.id, candidateId);
       notify('Gán nhân viên thành công');
       setCandidateId('');
-      setManualId('');
       await load();
     } catch (e) {
       notify(e instanceof Error ? e.message : 'Gán thất bại', 'error');
@@ -629,39 +623,19 @@ function StaffTab({ event, notify }: { event: EventDetail; notify: (m: string, k
       {canAssignMore && (
         <div className="card" style={{ padding: 20, marginBottom: 16 }}>
           <h3 style={{ marginTop: 0 }}>Gán nhân viên mới</h3>
-          {user?.role === 'ADMIN' ? (
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <select className="select" style={{ maxWidth: 320 }} value={candidateId} onChange={(e) => setCandidateId(e.target.value)}>
-                <option value="">-- Chọn nhân viên (role STAFF) --</option>
-                {staffUsers.map((u) => (
-                  <option key={u.id} value={u.id} disabled={staff.some((s) => s.userId === u.id)}>
-                    {u.fullName} ({u.email})
-                  </option>
-                ))}
-              </select>
-              <button className="btn btn-primary" onClick={assign} disabled={assigning || !candidateId}>
-                {assigning ? 'Đang gán...' : 'Gán'}
-              </button>
-            </div>
-          ) : (
-            <div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <input
-                  className="input"
-                  style={{ maxWidth: 380 }}
-                  placeholder="Nhập userId của nhân viên STAFF (dán tại đây)"
-                  value={manualId}
-                  onChange={(e) => setManualId(e.target.value)}
-                />
-                <button className="btn btn-primary" onClick={assign} disabled={assigning || !manualId}>
-                  {assigning ? 'Đang gán...' : 'Gán'}
-                </button>
-              </div>
-              <div className="hint" style={{ marginTop: 6 }}>
-                Do API chỉ cho Admin xem danh sách user, nhà tổ chức cần có userId của nhân viên (Admin xem ở trang quản trị).
-              </div>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <select className="select" style={{ maxWidth: 320 }} value={candidateId} onChange={(e) => setCandidateId(e.target.value)}>
+              <option value="">-- Chọn nhân viên (role STAFF) --</option>
+              {staffUsers.map((u) => (
+                <option key={u.id} value={u.id} disabled={staff.some((s) => s.userId === u.id)}>
+                  {u.fullName} ({u.email})
+                </option>
+              ))}
+            </select>
+            <button className="btn btn-primary" onClick={assign} disabled={assigning || !candidateId}>
+              {assigning ? 'Đang gán...' : 'Gán'}
+            </button>
+          </div>
         </div>
       )}
 

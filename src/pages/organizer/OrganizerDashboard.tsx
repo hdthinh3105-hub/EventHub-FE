@@ -10,7 +10,7 @@ import { formatDate, formatTime } from '@/lib/format';
 import { useEventSocket } from '@/lib/socket';
 
 const ALL_STATUSES: EventStatus[] = ['DRAFT', 'PUBLISHED', 'CANCELLED', 'COMPLETED'];
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 100;
 
 export function OrganizerDashboard() {
   const { user } = useAuth();
@@ -26,13 +26,10 @@ export function OrganizerDashboard() {
     try {
       const results = await Promise.all(
         ALL_STATUSES.map((status) =>
-          eventApi.list({ status, page: 1, limit: PAGE_SIZE }),
+          eventApi.list({ organizerId: user.id, status, page: 1, limit: PAGE_SIZE }),
         ),
       );
-      const mine = results
-        .flatMap((r) => r.data)
-        .filter((ev) => ev.organizer.id === user.id);
-      setEvents(mine);
+      setEvents(results.flatMap((r) => r.data));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không tải được danh sách');
     } finally {

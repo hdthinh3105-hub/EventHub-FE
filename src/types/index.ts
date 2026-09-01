@@ -141,6 +141,15 @@ export interface CheckinResult {
   checkedInAt: string;
 }
 
+export interface OrderDetailResult {
+  order: Order;
+  eventTitle: string;
+  eventId: string;
+  tickets: Ticket[];
+  ticketTypeName: string;
+  quantity: number;
+}
+
 export interface NotificationItem {
   id: string;
   userId: string;

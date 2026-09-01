@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { ApiEnvelope, Hold, CheckoutResult } from '@/types';
+import type { ApiEnvelope, Hold, CheckoutResult, OrderDetailResult } from '@/types';
 
 export const holdApi = {
   create: async (ticketTypeId: string, quantity: number): Promise<Hold> => {
@@ -9,6 +9,11 @@ export const holdApi = {
 };
 
 export const orderApi = {
+  getById: async (orderId: string): Promise<OrderDetailResult> => {
+    const res = await api.get<ApiEnvelope<OrderDetailResult>>(`/api/orders/${orderId}`);
+    if (!res.data) throw new Error('Không tìm thấy đơn hàng');
+    return res.data;
+  },
   checkout: async (holdId: string): Promise<CheckoutResult> => {
     const res = await api.post<ApiEnvelope<CheckoutResult>>('/api/orders/checkout', { holdId });
     return res.data!;

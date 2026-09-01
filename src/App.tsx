@@ -1,18 +1,22 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Outlet } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { ProtectedPage } from '@/components/ProtectedPage';
-import { HomePage } from '@/pages/HomePage';
-import { EventDetailPage } from '@/pages/EventDetailPage';
-import { CheckoutSuccessPage } from '@/pages/CheckoutSuccessPage';
-import { LoginPage } from '@/pages/LoginPage';
-import { RegisterPage } from '@/pages/RegisterPage';
-import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
-import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
-import { VerifyEmailPage } from '@/pages/VerifyEmailPage';
-import { OrganizerDashboard } from '@/pages/organizer/OrganizerDashboard';
-import { EventCreatePage } from '@/pages/organizer/EventCreatePage';
-import { EventManagePage } from '@/pages/organizer/EventManagePage';
-import { AdminDashboard } from '@/pages/admin/AdminDashboard';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Spinner } from '@/components/Feedback';
+
+const HomePage = lazy(() => import('@/pages/HomePage').then((m) => ({ default: m.HomePage })));
+const EventDetailPage = lazy(() => import('@/pages/EventDetailPage').then((m) => ({ default: m.EventDetailPage })));
+const CheckoutSuccessPage = lazy(() => import('@/pages/CheckoutSuccessPage').then((m) => ({ default: m.CheckoutSuccessPage })));
+const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage').then((m) => ({ default: m.VerifyEmailPage })));
+const OrganizerDashboard = lazy(() => import('@/pages/organizer/OrganizerDashboard').then((m) => ({ default: m.OrganizerDashboard })));
+const EventCreatePage = lazy(() => import('@/pages/organizer/EventCreatePage').then((m) => ({ default: m.EventCreatePage })));
+const EventManagePage = lazy(() => import('@/pages/organizer/EventManagePage').then((m) => ({ default: m.EventManagePage })));
+const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
 
 function Layout() {
   return (
@@ -38,55 +42,67 @@ function NotFound() {
   );
 }
 
+function PageSpinner() {
+  return (
+    <div className="page">
+      <div className="container">
+        <Spinner text="Đang tải..." />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/events/:id" element={<EventDetailPage />} />
-        <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+    <ErrorBoundary>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Suspense fallback={<PageSpinner />}><HomePage /></Suspense>} />
+          <Route path="/events/:id" element={<Suspense fallback={<PageSpinner />}><EventDetailPage /></Suspense>} />
+          <Route path="/checkout/success" element={<Suspense fallback={<PageSpinner />}><CheckoutSuccessPage /></Suspense>} />
 
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/login" element={<Suspense fallback={<PageSpinner />}><LoginPage /></Suspense>} />
+          <Route path="/register" element={<Suspense fallback={<PageSpinner />}><RegisterPage /></Suspense>} />
+          <Route path="/forgot-password" element={<Suspense fallback={<PageSpinner />}><ForgotPasswordPage /></Suspense>} />
+          <Route path="/reset-password" element={<Suspense fallback={<PageSpinner />}><ResetPasswordPage /></Suspense>} />
+          <Route path="/verify-email" element={<Suspense fallback={<PageSpinner />}><VerifyEmailPage /></Suspense>} />
 
-        <Route
-          path="/organizer"
-          element={
-            <ProtectedPage roles={['ORGANIZER', 'ADMIN']}>
-              <OrganizerDashboard />
-            </ProtectedPage>
-          }
-        />
-        <Route
-          path="/organizer/events/new"
-          element={
-            <ProtectedPage roles={['ORGANIZER', 'ADMIN']}>
-              <EventCreatePage />
-            </ProtectedPage>
-          }
-        />
-        <Route
-          path="/organizer/events/:id"
-          element={
-            <ProtectedPage roles={['ORGANIZER', 'ADMIN']}>
-              <EventManagePage />
-            </ProtectedPage>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedPage roles={['ADMIN']}>
-              <AdminDashboard />
-            </ProtectedPage>
-          }
-        />
+          <Route
+            path="/organizer"
+            element={
+              <ProtectedPage roles={['ORGANIZER', 'ADMIN']}>
+                <Suspense fallback={<PageSpinner />}><OrganizerDashboard /></Suspense>
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/organizer/events/new"
+            element={
+              <ProtectedPage roles={['ORGANIZER', 'ADMIN']}>
+                <Suspense fallback={<PageSpinner />}><EventCreatePage /></Suspense>
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/organizer/events/:id"
+            element={
+              <ProtectedPage roles={['ORGANIZER', 'ADMIN']}>
+                <Suspense fallback={<PageSpinner />}><EventManagePage /></Suspense>
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedPage roles={['ADMIN']}>
+                <Suspense fallback={<PageSpinner />}><AdminDashboard /></Suspense>
+              </ProtectedPage>
+            }
+          />
 
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+          <Route path="*" element={<NotFound />} />
+        </Route>
+      </Routes>
+    </ErrorBoundary>
   );
 }

@@ -87,10 +87,13 @@ Tài khoản seed (xem `../eventhub-backend/prisma/seed.ts`, mật khẩu `Passw
 |---|---|
 | `VITE_API_URL` | URL backend, VD `http://localhost:4000` hoặc `https://eventhub-1lf8.onrender.com` |
 
-## Ghi chú giới hạn (nối từ backend)
+## Ghi chú
 
-- Không có endpoint "đơn vé của tôi" hay "sự kiện của tôi" phía BE → Organizer Dashboard lọc `organizer.id` phía client (BE đã ghi nhận là giới hạn kiến trúc cần thêm `GET /my-events`).
-- `GET /users` chỉ ADMIN có quyền → Organizer khi gán staff phải tự nhập `userId` (Admin xem ở trang quản trị).
+- `GET /api/events?organizerId=...` hỗ trợ filter server-side cho Organizer Dashboard (không còn lọc client).
+- `GET /api/users?role=STAFF` cho cả ADMIN và ORGANIZER (ORGANIZER chỉ được xem STAFF) — StaffTab dùng dropdown cho cả hai, không cần nhập tay `userId`.
+- `GET /api/orders/:id` hỗ trợ `CheckoutSuccessPage` fallback khi F5 (kèm `?orderId=`).
+- `GET /api/users/:id` cho ADMIN/ORGANIZER tra cứu user.
+- `ErrorBoundary` + `React.lazy` code splitting cho tất cả routes.
 - Socket.IO: trang công khai (chi tiết sự kiện) kết nối **anonymous** để nhận số vé còn lại realtime; khi có `accessToken` sẽ gửi kèm để nhận cả thông báo cá nhân (room `user:<id>`). Khi token hết hạn cần refresh + đăng nhập lại để nhận tiếp thông báo cá nhân (số vé công khai vẫn hoạt động).
 
 ## Realtime (Socket.IO)

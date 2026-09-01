@@ -150,7 +150,7 @@ export function EventDetailPage() {
         }),
       );
       setPendingHold(null);
-      navigate('/checkout/success');
+      navigate(`/checkout/success?orderId=${result.order.id}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Thanh toán thất bại';
       notify(msg, 'error');

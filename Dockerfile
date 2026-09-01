@@ -44,6 +44,6 @@ EXPOSE 80
 # Health check: nginx image alpine có sẵn wget (busybox), trả 0 nếu trang
 # chủ trả về HTTP 200 (giống HEALTHCHECK backend dùng /health).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q -O - http://localhost/ >/dev/null || exit 1
+  CMD wget -q -O - http://127.0.0.1/ >/dev/null || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

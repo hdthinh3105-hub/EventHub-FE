@@ -5,6 +5,7 @@ export interface EventQuery {
   page?: number;
   limit?: number;
   categoryId?: string;
+  organizerId?: string;
   status?: EventStatus;
   search?: string;
 }
@@ -34,6 +35,7 @@ export const eventApi = {
     params.set('page', String(query.page ?? 1));
     params.set('limit', String(query.limit ?? 9));
     if (query.categoryId) params.set('categoryId', query.categoryId);
+    if (query.organizerId) params.set('organizerId', query.organizerId);
     if (query.status) params.set('status', query.status);
     if (query.search) params.set('search', query.search);
     const res = await api.get<Paginated<EventSummary>>(`/api/events?${params.toString()}`);

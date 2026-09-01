@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { EmptyState } from '@/components/Feedback';
+import { orderApi } from '@/api/tickets';
+import { Spinner, EmptyState } from '@/components/Feedback';
 import { formatCurrency } from '@/lib/format';
 import type { Ticket } from '@/types';
 
@@ -15,21 +17,74 @@ interface LastCheckout {
 }
 
 export function CheckoutSuccessPage() {
-  const raw = sessionStorage.getItem('last_checkout');
-  let data: LastCheckout | null = null;
-  if (raw) {
+  const [searchParams] = useSearchParams();
+  const [data, setData] = useState<LastCheckout | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadFromSession = useCallback((): LastCheckout | null => {
+    const raw = sessionStorage.getItem('last_checkout');
+    if (!raw) return null;
     try {
-      data = JSON.parse(raw) as LastCheckout;
+      return JSON.parse(raw) as LastCheckout;
     } catch {
-      data = null;
+      return null;
     }
+  }, []);
+
+  const loadFromServer = useCallback(async (orderId: string) => {
+    try {
+      const result = await orderApi.getById(orderId);
+      return {
+        eventId: result.eventId,
+        eventTitle: result.eventTitle,
+        ticketTypeName: result.ticketTypeName,
+        quantity: result.quantity,
+        totalAmount: result.order.totalAmount,
+        orderId: result.order.id,
+        tickets: result.tickets,
+      } as LastCheckout;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const sessionData = loadFromSession();
+    if (sessionData) {
+      setData(sessionData);
+      setLoading(false);
+      return;
+    }
+
+    const orderId = searchParams.get('orderId');
+    if (orderId) {
+      loadFromServer(orderId).then((d) => {
+        if (d) {
+          setData(d);
+          sessionStorage.setItem('last_checkout', JSON.stringify(d));
+        }
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
+  }, [loadFromSession, loadFromServer, searchParams]);
+
+  if (loading) {
+    return (
+      <div className="page">
+        <div className="container">
+          <Spinner text="Đang tải thông tin đơn hàng..." />
+        </div>
+      </div>
+    );
   }
 
   if (!data) {
     return (
       <div className="page">
         <div className="container">
-          <EmptyState title="Không có đơn hàng nào để hiển thị" />
+          <EmptyState title="Không có đơn hàng nào để hiển thị" sub="Vui lòng kiểm tra lại link hoặc quay về trang chủ" />
           <div style={{ textAlign: 'center' }}>
             <Link className="btn btn-primary" to="/">
               Về trang chủ
