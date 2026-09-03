@@ -7,35 +7,48 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test:
+  lint:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Cài đặt Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
 
-      - name: Cài đặt package
-        run: npm ci
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run typecheck
 
-      - name: Lint
-        run: npm run lint
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
 
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Chạy test (Vitest + Testing Library)
-        run: npm test
-
-      # Build với VITE_API_URL. Dùng repo variable (vars) để không cần
-      # dấu secret nếu URL API là public - ưu tiên biến đặt ở GitHub, nếu
-      # chưa đặt thì fallback về localhost (giống ci.yml của BE).
-      - name: Build production (đảm bảo build thật không lỗi)
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL || 'http://localhost:4000' }}
-        run: npm run build
