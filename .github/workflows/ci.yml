@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -23,7 +23,10 @@ jobs:
       - name: Cài đặt package
         run: npm ci
 
-      - name: Kiểm tra type TypeScript (không build ra file)
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
         run: npm run typecheck
 
       - name: Chạy test (Vitest + Testing Library)
@@ -36,15 +39,3 @@ jobs:
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL || 'http://localhost:4000' }}
         run: npm run build
-
-  # --- CD: chỉ chạy khi build-and-test THÀNH CÔNG, và CHỈ khi push thẳng
-  # vào main (không chạy cho Pull Request - tránh deploy code chưa được
-  # review/merge). Giống hệt backend: gọi Render Deploy Hook.
-  deploy:
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Gọi Render Deploy Hook
-        run: |
-          curl -f -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
