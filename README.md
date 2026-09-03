@@ -1,6 +1,6 @@
 # EventHub Frontend — React + Vite
 
-Giao diện cho nền tảng đặt vé EventHub, kết nối tới `eventhub-backend` qua REST + Socket.IO. Demo: https://eventhub-fe.onrender.com — API: https://eventhub-1lf8.onrender.com
+Giao diện cho nền tảng đặt vé EventHub, kết nối tới `eventhub-backend` qua REST + Socket.IO. Demo: https://eventhub-rosy.vercel.app — API: https://eventhub-1lf8.onrender.com
 
 ---
 
